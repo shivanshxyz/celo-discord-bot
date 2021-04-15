@@ -1,0 +1,12 @@
+{
+ 
+    "compilerOptions": {
+      "baseUrl": ".",
+      "moduleResolution": "node",
+      "module": "commonjs",
+      "target": "esnext",
+      "resolveJsonModule": true,
+      "esModuleInterop": true  
+    },
+    "files": ["bot.ts"]
+  }
