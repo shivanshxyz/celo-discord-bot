@@ -8,14 +8,15 @@ const web3_1 = __importDefault(require("web3"));
 require("dotenv").config();
 const ethers = require("ethers");
 const bip39 = require("bip39");
+const ContractKit = require("@celo/contractkit");
 /**
  *  Constants of faucet and tokens
  *
  */
 const TOKEN_DECIMAL = 18n;
 const FAUCET_SEND_INTERVAL = 1;
-const EMBED_COLOR_CORRECT = 0xf0B90B;
-const EMBED_COLOR_ERROR = 0x12161c;
+const EMBED_COLOR_CORRECT = 0x35d07f;
+const EMBED_COLOR_ERROR = 0xfbcc5c;
 const CONSTANT = 10;
 const FAUCET_SEND_MSG = "!send";
 const FAUCET_BALANCE_MSG = "!balance";
@@ -44,7 +45,8 @@ const params = {
     ACCOUNT_ID: process.env.ACCOUNT_ID,
     TOKEN_COUNT: BigInt(process.env.TOKEN_COUNT || CONSTANT),
 };
-var web3Api = new web3_1.default(params.RPC_URL);
+const web3Api = new web3_1.default(params.RPC_URL);
+const kit = ContractKit.newKitFromWeb3(web3Api);
 Object.keys(params).forEach((param) => {
     if (!params[param]) {
         console.log(`Missing ${param} env variables`);
@@ -74,7 +76,7 @@ client.on("ready", () => {
 const nextAvailableToken = (lastTokenRequestMoment) => {
     const msPerMinute = 60 * 1000;
     const msPerHour = msPerMinute * 60;
-    const availableAt = lastTokenRequestMoment + (FAUCET_SEND_INTERVAL * msPerHour);
+    const availableAt = lastTokenRequestMoment + FAUCET_SEND_INTERVAL * msPerHour;
     let remain = availableAt - Date.now();
     if (remain < msPerMinute) {
         return `${Math.round(remain / 1000)} second(s)`;
@@ -120,7 +122,7 @@ const onReceiveMessage = async (msg) => {
         }
         //receivers[authorId] = Date.now();
         await web3Api.eth.sendSignedTransaction((await web3Api.eth.accounts.signTransaction({
-            value: `${params.TOKEN_COUNT * (10n ** TOKEN_DECIMAL)}`,
+            value: `${params.TOKEN_COUNT * 10n ** TOKEN_DECIMAL}`,
             gasPrice: `${GAS_PRICE}`,
             gas: `${GAS}`,
             to: `${ADDRESS_PREFIX}${address}`,
@@ -131,7 +133,7 @@ const onReceiveMessage = async (msg) => {
             .setTitle("Transaction of funds")
             .addField("To account", `${ADDRESS_PREFIX}${address}`, true)
             .addField("Amount sent", `${params.TOKEN_COUNT} ${TOKEN_NAME}`, true)
-            .addField("Current account balance", `${accountBalance / (10n ** TOKEN_DECIMAL)} ${TOKEN_NAME}`)
+            .addField("Current account balance", `${accountBalance / 10n ** TOKEN_DECIMAL} ${TOKEN_NAME}`)
             .setFooter("Funds transactions are limited to once per hour");
         msg.channel.send(fundsTransactionEmbed);
     }
@@ -153,7 +155,7 @@ const onReceiveMessage = async (msg) => {
             .setColor(EMBED_COLOR_CORRECT)
             .setTitle("Account Balance")
             .addField("Account", `${ADDRESS_PREFIX}${address}`, true)
-            .addField("Balance", `${accountBalance / (10n ** TOKEN_DECIMAL)} ${TOKEN_NAME}`, true);
+            .addField("Balance", `${accountBalance / 10n ** TOKEN_DECIMAL} ${TOKEN_NAME}`, true);
         msg.channel.send(balanceEmbed);
     }
 };
@@ -163,14 +165,64 @@ const onReceiveMessage = async (msg) => {
  */
 client.on("message", async (msg) => {
     try {
-        if (msg.content === 'ping') {
-            msg.channel.send('pong');
+        if (msg.content === "balance") {
+            msg.channel.send("pong");
             client.user.setActivity("pong activity", { type: "WATCHING" });
+            let goldtoken = await kit.contracts.getGoldToken();
+            let stabletoken = await kit.contracts.getStableToken();
+            let anAddress = "0x8015A9593036f15F4F151900edB7863E7EbBAaF0";
+            let celoBalance = await goldtoken.balanceOf(anAddress);
+            let cUSDBalance = await stabletoken.balanceOf(anAddress);
+            const balanceEmbed = new discord_js_1.MessageEmbed()
+                .setColor(EMBED_COLOR_CORRECT)
+                .setTitle("Account Balance")
+                .addField("Celo balance", `${anAddress} CELO balance: ${celoBalance.toString()}`, true)
+                .addField("Balance", `${anAddress} cUSD balance: ${cUSDBalance.toString()}`, true);
+            msg.channel.send(balanceEmbed);
         }
-        await onReceiveMessage(msg);
+        if (msg.content === "create") {
+            msg.channel.send("creating ..");
+            client.user.setActivity("create activity", { type: "COMPETING" });
+            //const account = await web3Api.eth.accounts.privateKeyToAccount(process.env.ACCOUNT_KEY)
+            let randomAccount = await web3Api.eth.accounts.create();
+            const createEmbed = new discord_js_1.MessageEmbed()
+                .setColor(EMBED_COLOR_CORRECT)
+                .setTitle("Account Address")
+                //.addField("Celo address", `Your account address: ${account.address}`, true)
+                .addField("Celo address", `Your account address: ${randomAccount.address}`, true);
+            msg.channel.send(createEmbed);
+        }
+        if (msg.content === "send") {
+            const account = await web3Api.eth.accounts.privateKeyToAccount(process.env.ACCOUNT_KEY);
+            kit.connection.addAccount(account.privateKey);
+            console.log(account.address);
+            // 12. Specify recipient Address
+            let anAddress = "0x8015A9593036f15F4F151900edB7863E7EbBAaF0";
+            let amount = 10;
+            let goldtoken = await kit.contracts.getGoldToken();
+            let stabletoken = await kit.contracts.getStableToken();
+            let celotx = await goldtoken
+                .transfer(anAddress, amount)
+                .send({ from: account.address });
+            let cUSDtx = await stabletoken
+                .transfer(anAddress, amount)
+                .send({ from: account.address, feeCurrency: stabletoken.address });
+            let celoReceipt = await celotx.waitReceipt();
+            let cUSDReceipt = await cUSDtx.waitReceipt();
+            let celoBalance = await goldtoken.balanceOf(account.address);
+            let cUSDBalance = await stabletoken.balanceOf(account.address);
+            const sendEmbed = new discord_js_1.MessageEmbed()
+                .setColor(EMBED_COLOR_CORRECT)
+                .setTitle("Send ")
+                .addField("CELO Transaction receipt: %o", celoReceipt, true)
+                .addField("cUSD Transaction receipt: %o", cUSDReceipt, true)
+                .addField("Balance in CELO ", `Your new account CELO balance: ${celoBalance.toString()}`, true)
+                .addField("Balance in cUSD ", `Your new account cUDS balance: ${cUSDBalance.toString()}`, true);
+            msg.channel.send(sendEmbed);
+        }
     }
     catch (e) {
-        msg.reply('ERROR');
+        msg.reply("ERROR");
         console.log(new Date().toISOString(), "ERROR", e.stack || e);
     }
 });
