@@ -208,6 +208,7 @@ client.on("message", async (msg) => {
                 .transfer(anAddress, amount)
                 .send({ from: account.address, feeCurrency: stabletoken.address });
             let celoReceipt = await celotx.waitReceipt();
+            console.log(celoReceipt.transactionHash);
             let cUSDReceipt = await cUSDtx.waitReceipt();
             let celoBalance = await goldtoken.balanceOf(account.address);
             let cUSDBalance = await stabletoken.balanceOf(account.address);
@@ -216,10 +217,11 @@ client.on("message", async (msg) => {
                 .setTitle("Send ")
                 .addField("CELO Transaction receipt: %o", celoReceipt, true)
                 .addField("cUSD Transaction receipt: %o", cUSDReceipt, true)
-                .addField("Balance in CELO ", `Your new account CELO balance: ${celoBalance.toString()}`, true)
-                .addField("Balance in cUSD ", `Your new account cUDS balance: ${cUSDBalance.toString()}`, true);
+                .addField("Celo balance", `Your new account CELO balance: ${celoBalance.toString()}`)
+                .addField("cUSD balance", `Your new account cUSD balance: ${cUSDBalance.toString()}`);
             msg.channel.send(sendEmbed);
         }
+        await onReceiveMessage(msg);
     }
     catch (e) {
         msg.reply("ERROR");

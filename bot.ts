@@ -247,29 +247,25 @@ client.on("message", async (msg) => {
       let cUSDtx = await stabletoken
         .transfer(anAddress, amount)
         .send({ from: account.address, feeCurrency: stabletoken.address });
-      let celoReceipt = await celotx.waitReceipt();
-      let cUSDReceipt = await cUSDtx.waitReceipt();
-      let celoBalance = await goldtoken.balanceOf(account.address);
-      let cUSDBalance = await stabletoken.balanceOf(account.address);
+      let celoReceipt = await celotx.waitReceipt()
+       console.log(celoReceipt)
 
+      let cUSDReceipt = await cUSDtx.waitReceipt();
+      let celoBalance = await goldtoken.balanceOf(account.address)
+      let cUSDBalance = await stabletoken.balanceOf(account.address)
       const sendEmbed = new MessageEmbed()
         .setColor(EMBED_COLOR_CORRECT)
         .setTitle("Send ")
+        .addField("Transaction Hahs",celoReceipt.transactionHash,true)
         .addField("CELO Transaction receipt: %o", celoReceipt, true)
         .addField("cUSD Transaction receipt: %o", cUSDReceipt, true)
-        .addField(
-          "Balance in CELO ",
-          `Your new account CELO balance: ${celoBalance.toString()}`,
-          true
-        )
-        .addField(
-          "Balance in cUSD ",
-          `Your new account cUDS balance: ${cUSDBalance.toString()}`,
-          true
-        );
-
-      msg.channel.send(sendEmbed);
+        .addField("Celo balance" , `Your new account CELO balance: ${celoBalance.toString()}`)
+        .addField("cUSD balance" , `Your new account cUSD balance: ${cUSDBalance.toString()}`)
+  
+        msg.channel.send(sendEmbed);
+      
     }
+    await onReceiveMessage(msg)
   } catch (e) {
     msg.reply("ERROR");
     console.log(new Date().toISOString(), "ERROR", e.stack || e);
