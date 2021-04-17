@@ -21,8 +21,9 @@ const CONSTANT = 10;
 const FAUCET_SEND_MSG = "!send";
 const FAUCET_BALANCE_MSG = "!balance";
 const ADDRESS_LENGTH = 40;
-const GAS_PRICE = "0x9184e72a000";
-const GAS = "0x76c0";
+//https://github.com/celo-tools/celo-web-wallet/blob/master/src/consts.ts
+const GAS_PRICE = "0x12A05F200";
+const GAS = "0x5208";
 const TOKEN_NAME = "CELO";
 const ADDRESS_PREFIX = "0x";
 const URL_CHAINLINK = "";
@@ -30,6 +31,7 @@ const URL_FAUCET = "https://celo.org/developers/faucet";
 const URL_WALLET = "https://celowallet.app/setup";
 const URL_EXPLORE = "https://alfajores-blockscout.celo-testnet.org";
 const URL_DISCORD = "https://discord.com/invite/atBpDfqQqX";
+const URL_STATUS = "https://alfajores-celostats.celo-testnet.org";
 //Explorers URL
 //Faucets
 //HackerGuides
@@ -208,13 +210,15 @@ client.on("message", async (msg) => {
                 .transfer(anAddress, amount)
                 .send({ from: account.address, feeCurrency: stabletoken.address });
             let celoReceipt = await celotx.waitReceipt();
-            console.log(celoReceipt.transactionHash);
+            console.log(celoReceipt);
             let cUSDReceipt = await cUSDtx.waitReceipt();
             let celoBalance = await goldtoken.balanceOf(account.address);
             let cUSDBalance = await stabletoken.balanceOf(account.address);
             const sendEmbed = new discord_js_1.MessageEmbed()
                 .setColor(EMBED_COLOR_CORRECT)
-                .setTitle("Send ")
+                .setTitle("Click Here to view your transaction !! ")
+                .addField("Transaction Hash", celoReceipt.transactionHash, true)
+                .setURL(`${URL_EXPLORE}` + '/tx/' + celoReceipt.transactionHash + '/token_transfers')
                 .addField("CELO Transaction receipt: %o", celoReceipt, true)
                 .addField("cUSD Transaction receipt: %o", cUSDReceipt, true)
                 .addField("Celo balance", `Your new account CELO balance: ${celoBalance.toString()}`)

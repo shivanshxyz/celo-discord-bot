@@ -17,8 +17,10 @@ const CONSTANT = 10;
 const FAUCET_SEND_MSG = "!send";
 const FAUCET_BALANCE_MSG = "!balance";
 const ADDRESS_LENGTH = 40;
-const GAS_PRICE = "0x9184e72a000";
-const GAS = "0x76c0";
+
+//https://github.com/celo-tools/celo-web-wallet/blob/master/src/consts.ts
+const GAS_PRICE = "0x12A05F200";
+const GAS = "0x5208";
 const TOKEN_NAME = "CELO";
 const ADDRESS_PREFIX = "0x";
 
@@ -27,6 +29,7 @@ const URL_FAUCET = "https://celo.org/developers/faucet";
 const URL_WALLET = "https://celowallet.app/setup";
 const URL_EXPLORE = "https://alfajores-blockscout.celo-testnet.org";
 const URL_DISCORD = "https://discord.com/invite/atBpDfqQqX";
+const URL_STATUS = "https://alfajores-celostats.celo-testnet.org"
 //Explorers URL
 
 //Faucets
@@ -103,7 +106,7 @@ const onReceiveMessage = async (msg) => {
   const channelId = msg.channel.id;
   if (messageContent.startsWith(`${FAUCET_SEND_MSG}`)) {
     console.log("sending ...");
-    /*	if (receivers[authorId] > Date.now() - 3600 * 1000) {
+    	if (receivers[authorId] > Date.now() - 3600 * 1000) {
 			const errorEmbed = new MessageEmbed()
 				.setColor(EMBED_COLOR_ERROR)
 				.setTitle(`You already received tokens!`)
@@ -111,8 +114,7 @@ const onReceiveMessage = async (msg) => {
 				.setFooter("Funds transactions are limited to once per hour");
 			msg.channel.send(errorEmbed);
 			return;
-		}*/
-
+		}
     let address = messageContent.slice(`${FAUCET_SEND_MSG}`.length).trim();
     if (address.startsWith(`${ADDRESS_PREFIX}`)) {
       address = address.slice(`${ADDRESS_PREFIX}`.length);
@@ -127,36 +129,9 @@ const onReceiveMessage = async (msg) => {
       msg.channel.send(errorEmbed);
       return;
     }
-    //receivers[authorId] = Date.now();
-
-    await web3Api.eth.sendSignedTransaction(
-      (
-        await web3Api.eth.accounts.signTransaction(
-          {
-            value: `${params.TOKEN_COUNT * 10n ** TOKEN_DECIMAL}`,
-            gasPrice: `${GAS_PRICE}`,
-            gas: `${GAS}`,
-            to: `${ADDRESS_PREFIX}${address}`,
-          },
-          params.ACCOUNT_KEY
-        )
-      ).rawTransaction
-    );
+    receivers[authorId] = Date.now();
     const accountBalance = BigInt(await web3Api.eth.getBalance(`0x${address}`));
 
-    const fundsTransactionEmbed = new MessageEmbed()
-      .setColor(EMBED_COLOR_CORRECT)
-      .setTitle("Transaction of funds")
-      .addField("To account", `${ADDRESS_PREFIX}${address}`, true)
-      .addField("Amount sent", `${params.TOKEN_COUNT} ${TOKEN_NAME}`, true)
-      .addField(
-        "Current account balance",
-        `${accountBalance / 10n ** TOKEN_DECIMAL} ${TOKEN_NAME}`
-      )
-      .setFooter("Funds transactions are limited to once per hour");
-
-    msg.channel.send(fundsTransactionEmbed);
-  }
   if (messageContent.startsWith(`${FAUCET_BALANCE_MSG}`)) {
     let address = messageContent.slice(`${FAUCET_BALANCE_MSG}`.length).trim();
     if (address.startsWith(`${ADDRESS_PREFIX}`)) {
@@ -167,7 +142,6 @@ const onReceiveMessage = async (msg) => {
         .setColor(EMBED_COLOR_ERROR)
         .setTitle("Invalid address")
         .setFooter("Addresses must follow the correct address format");
-
       msg.channel.send(errorEmbed);
       return;
     }
@@ -181,7 +155,6 @@ const onReceiveMessage = async (msg) => {
         `${accountBalance / 10n ** TOKEN_DECIMAL} ${TOKEN_NAME}`,
         true
       );
-
     msg.channel.send(balanceEmbed);
   }
 };
@@ -255,8 +228,9 @@ client.on("message", async (msg) => {
       let cUSDBalance = await stabletoken.balanceOf(account.address)
       const sendEmbed = new MessageEmbed()
         .setColor(EMBED_COLOR_CORRECT)
-        .setTitle("Send ")
-        .addField("Transaction Hahs",celoReceipt.transactionHash,true)
+        .setTitle("Click Here to view your transaction !! ")
+        .addField("Transaction Hash",celoReceipt.transactionHash,true)
+        .setURL( `${URL_EXPLORE}` +'/tx/'+ celoReceipt.transactionHash+'/token_transfers')
         .addField("CELO Transaction receipt: %o", celoReceipt, true)
         .addField("cUSD Transaction receipt: %o", cUSDReceipt, true)
         .addField("Celo balance" , `Your new account CELO balance: ${celoBalance.toString()}`)
