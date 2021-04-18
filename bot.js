@@ -100,15 +100,15 @@ const onReceiveMessage = async (msg) => {
     const channelId = msg.channel.id;
     if (messageContent.startsWith(`${FAUCET_SEND_MSG}`)) {
         console.log("sending ...");
-        /*	if (receivers[authorId] > Date.now() - 3600 * 1000) {
-                const errorEmbed = new MessageEmbed()
-                    .setColor(EMBED_COLOR_ERROR)
-                    .setTitle(`You already received tokens!`)
-                    .addField("Remaining time", `You still need to wait ${nextAvailableToken(receivers[authorId])} to receive more tokens`)
-                    .setFooter("Funds transactions are limited to once per hour");
-                msg.channel.send(errorEmbed);
-                return;
-            }*/
+        if (receivers[authorId] > Date.now() - 3600 * 1000) {
+            const errorEmbed = new discord_js_1.MessageEmbed()
+                .setColor(EMBED_COLOR_ERROR)
+                .setTitle(`You already received tokens!`)
+                .addField("Remaining time", `You still need to wait ${nextAvailableToken(receivers[authorId])} to receive more tokens`)
+                .setFooter("Funds transactions are limited to once per hour");
+            msg.channel.send(errorEmbed);
+            return;
+        }
         let address = messageContent.slice(`${FAUCET_SEND_MSG}`.length).trim();
         if (address.startsWith(`${ADDRESS_PREFIX}`)) {
             address = address.slice(`${ADDRESS_PREFIX}`.length);
@@ -122,49 +122,24 @@ const onReceiveMessage = async (msg) => {
             msg.channel.send(errorEmbed);
             return;
         }
-        //receivers[authorId] = Date.now();
-        await web3Api.eth.sendSignedTransaction((await web3Api.eth.accounts.signTransaction({
-            value: `${params.TOKEN_COUNT * 10n ** TOKEN_DECIMAL}`,
-            gasPrice: `${GAS_PRICE}`,
-            gas: `${GAS}`,
-            to: `${ADDRESS_PREFIX}${address}`,
-        }, params.ACCOUNT_KEY)).rawTransaction);
+        receivers[authorId] = Date.now();
         const accountBalance = BigInt(await web3Api.eth.getBalance(`0x${address}`));
-        const fundsTransactionEmbed = new discord_js_1.MessageEmbed()
-            .setColor(EMBED_COLOR_CORRECT)
-            .setTitle("Transaction of funds")
-            .addField("To account", `${ADDRESS_PREFIX}${address}`, true)
-            .addField("Amount sent", `${params.TOKEN_COUNT} ${TOKEN_NAME}`, true)
-            .addField("Current account balance", `${accountBalance / 10n ** TOKEN_DECIMAL} ${TOKEN_NAME}`)
-            .setFooter("Funds transactions are limited to once per hour");
-        msg.channel.send(fundsTransactionEmbed);
-    }
-    if (messageContent.startsWith(`${FAUCET_BALANCE_MSG}`)) {
-        let address = messageContent.slice(`${FAUCET_BALANCE_MSG}`.length).trim();
-        if (address.startsWith(`${ADDRESS_PREFIX}`)) {
-            address = address.slice(`${ADDRESS_PREFIX}`.length);
+        if (messageContent.startsWith(`${FAUCET_BALANCE_MSG}`)) {
+            let address = messageContent.slice(`${FAUCET_BALANCE_MSG}`.length).trim();
+            if (address.startsWith(`${ADDRESS_PREFIX}`)) {
+                address = address.slice(`${ADDRESS_PREFIX}`.length);
+            }
+            if (address.length != `${ADDRESS_LENGTH}`) {
+                const errorEmbed = new discord_js_1.MessageEmbed()
+                    .setColor(EMBED_COLOR_ERROR)
+                    .setTitle("Invalid address")
+                    .setFooter("Addresses must follow the correct address format");
+                msg.channel.send(errorEmbed);
+                return;
+            }
         }
-        if (address.length != `${ADDRESS_LENGTH}`) {
-            const errorEmbed = new discord_js_1.MessageEmbed()
-                .setColor(EMBED_COLOR_ERROR)
-                .setTitle("Invalid address")
-                .setFooter("Addresses must follow the correct address format");
-            msg.channel.send(errorEmbed);
-            return;
-        }
-        const accountBalance = BigInt(await web3Api.eth.getBalance(`0x${address}`));
-        const balanceEmbed = new discord_js_1.MessageEmbed()
-            .setColor(EMBED_COLOR_CORRECT)
-            .setTitle("Account Balance")
-            .addField("Account", `${ADDRESS_PREFIX}${address}`, true)
-            .addField("Balance", `${accountBalance / 10n ** TOKEN_DECIMAL} ${TOKEN_NAME}`, true);
-        msg.channel.send(balanceEmbed);
     }
 };
-/**
- *  only for testing bot purpose
- *
- */
 client.on("message", async (msg) => {
     try {
         if (msg.content === "balance") {
