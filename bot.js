@@ -98,46 +98,37 @@ const onReceiveMessage = async (msg) => {
     const authorId = msg.author.id;
     const messageContent = msg.content;
     const channelId = msg.channel.id;
-    if (messageContent.startsWith(`${FAUCET_SEND_MSG}`)) {
-        console.log("sending ...");
-        if (receivers[authorId] > Date.now() - 3600 * 1000) {
-            const errorEmbed = new discord_js_1.MessageEmbed()
-                .setColor(EMBED_COLOR_ERROR)
-                .setTitle(`You already received tokens!`)
-                .addField("Remaining time", `You still need to wait ${nextAvailableToken(receivers[authorId])} to receive more tokens`)
-                .setFooter("Funds transactions are limited to once per hour");
-            msg.channel.send(errorEmbed);
-            return;
-        }
-        let address = messageContent.slice(`${FAUCET_SEND_MSG}`.length).trim();
+    let address = messageContent.slice(`${FAUCET_SEND_MSG}`.length).trim();
+    if (address.length !== ADDRESS_LENGTH) {
+        console.log(address.length);
+        const errorEmbed = new discord_js_1.MessageEmbed()
+            .setColor(EMBED_COLOR_ERROR)
+            .setTitle("Invalid address")
+            .setFooter("Addresses must follow the correct address format");
+        msg.channel.send(errorEmbed);
+        return;
+    }
+    const accountBalance = BigInt(await web3Api.eth.getBalance(`0x${address}`));
+    if (messageContent.startsWith(`${FAUCET_BALANCE_MSG}`)) {
+        let address = messageContent.slice(`${FAUCET_BALANCE_MSG}`.length).trim();
         if (address.startsWith(`${ADDRESS_PREFIX}`)) {
             address = address.slice(`${ADDRESS_PREFIX}`.length);
         }
-        if (address.length !== ADDRESS_LENGTH) {
-            console.log(address.length);
+    }
+    if (messageContent.startsWith(`${FAUCET_SEND_MSG}`)) {
+        if (receivers[authorId] > Date.now() - 3600 * 1000) {
             const errorEmbed = new discord_js_1.MessageEmbed()
                 .setColor(EMBED_COLOR_ERROR)
-                .setTitle("Invalid address")
-                .setFooter("Addresses must follow the correct address format");
+                .setTitle(`Time Control!`)
+                .addField("Remaining time", `You still need to wait ${nextAvailableToken(receivers[authorId])} `)
+                .setFooter("Time control ");
             msg.channel.send(errorEmbed);
             return;
         }
-        receivers[authorId] = Date.now();
-        const accountBalance = BigInt(await web3Api.eth.getBalance(`0x${address}`));
-        if (messageContent.startsWith(`${FAUCET_BALANCE_MSG}`)) {
-            let address = messageContent.slice(`${FAUCET_BALANCE_MSG}`.length).trim();
-            if (address.startsWith(`${ADDRESS_PREFIX}`)) {
-                address = address.slice(`${ADDRESS_PREFIX}`.length);
-            }
-            if (address.length != `${ADDRESS_LENGTH}`) {
-                const errorEmbed = new discord_js_1.MessageEmbed()
-                    .setColor(EMBED_COLOR_ERROR)
-                    .setTitle("Invalid address")
-                    .setFooter("Addresses must follow the correct address format");
-                msg.channel.send(errorEmbed);
-                return;
-            }
+        if (address.startsWith(`${ADDRESS_PREFIX}`)) {
+            address = address.slice(`${ADDRESS_PREFIX}`.length);
         }
+        receivers[authorId] = Date.now();
     }
 };
 client.on("message", async (msg) => {
@@ -193,7 +184,10 @@ client.on("message", async (msg) => {
                 .setColor(EMBED_COLOR_CORRECT)
                 .setTitle("Click Here to view your transaction !! ")
                 .addField("Transaction Hash", celoReceipt.transactionHash, true)
-                .setURL(`${URL_EXPLORE}` + '/tx/' + celoReceipt.transactionHash + '/token_transfers')
+                .setURL(`${URL_EXPLORE}` +
+                "/tx/" +
+                celoReceipt.transactionHash +
+                "/token_transfers")
                 .addField("CELO Transaction receipt: %o", celoReceipt, true)
                 .addField("cUSD Transaction receipt: %o", cUSDReceipt, true)
                 .addField("Celo balance", `Your new account CELO balance: ${celoBalance.toString()}`)

@@ -29,7 +29,7 @@ const URL_FAUCET = "https://celo.org/developers/faucet";
 const URL_WALLET = "https://celowallet.app/setup";
 const URL_EXPLORE = "https://alfajores-blockscout.celo-testnet.org";
 const URL_DISCORD = "https://discord.com/invite/atBpDfqQqX";
-const URL_STATUS = "https://alfajores-celostats.celo-testnet.org"
+const URL_STATUS = "https://alfajores-celostats.celo-testnet.org";
 //Explorers URL
 
 //Faucets
@@ -104,51 +104,53 @@ const onReceiveMessage = async (msg) => {
   const authorId = msg.author.id;
   const messageContent = msg.content;
   const channelId = msg.channel.id;
-  if (messageContent.startsWith(`${FAUCET_SEND_MSG}`)) {
-   
-    	if (receivers[authorId] > Date.now() - 3600 * 1000) {
-			const errorEmbed = new MessageEmbed()
-				.setColor(EMBED_COLOR_ERROR)
-				.setTitle(`Time Control!`)
-				.addField("Remaining time", `You still need to wait ${nextAvailableToken(receivers[authorId])} to receive more tokens`)
-				.setFooter("Time control ");
-			msg.channel.send(errorEmbed);
-			return;
-		}
-    let address = messageContent.slice(`${FAUCET_SEND_MSG}`.length).trim();
-    if (address.startsWith(`${ADDRESS_PREFIX}`)) {
-      address = address.slice(`${ADDRESS_PREFIX}`.length);
-    }
+  let address = messageContent.slice(`${FAUCET_SEND_MSG}`.length).trim();
 
-    if (address.length !== ADDRESS_LENGTH) {
-      console.log(address.length);
-      const errorEmbed = new MessageEmbed()
-        .setColor(EMBED_COLOR_ERROR)
-        .setTitle("Invalid address")
-        .setFooter("Addresses must follow the correct address format");
-      msg.channel.send(errorEmbed);
-      return;
-    }
-    receivers[authorId] = Date.now();
-    const accountBalance = BigInt(await web3Api.eth.getBalance(`0x${address}`));
-
+  if (address.length !== ADDRESS_LENGTH) {
+    console.log(address.length);
+    const errorEmbed = new MessageEmbed()
+      .setColor(EMBED_COLOR_ERROR)
+      .setTitle("Invalid address")
+      .setFooter("Addresses must follow the correct address format");
+    msg.channel.send(errorEmbed);
+    return;
+  }
+  const accountBalance = BigInt(await web3Api.eth.getBalance(`0x${address}`));
   if (messageContent.startsWith(`${FAUCET_BALANCE_MSG}`)) {
     let address = messageContent.slice(`${FAUCET_BALANCE_MSG}`.length).trim();
     if (address.startsWith(`${ADDRESS_PREFIX}`)) {
       address = address.slice(`${ADDRESS_PREFIX}`.length);
     }
-    if (address.length != `${ADDRESS_LENGTH}`) {
+    const fundsTransactionEmbed = new MessageEmbed()
+      .setColor(EMBED_COLOR_CORRECT)
+      .setTitle("Balance")
+       .addField(
+        "Current account balance",
+        `${accountBalance / 10n ** TOKEN_DECIMAL} ${TOKEN_NAME}`
+      )
+      .setFooter("Funds transactions are limited to once per hour");
+
+      msg.channel.send(fundsTransactionEmbed);
+  }
+  if (messageContent.startsWith(`${FAUCET_SEND_MSG}`)) {
+    if (receivers[authorId] > Date.now() - 3600 * 1000) {
       const errorEmbed = new MessageEmbed()
         .setColor(EMBED_COLOR_ERROR)
-        .setTitle("Invalid address")
-        .setFooter("Addresses must follow the correct address format");
+        .setTitle(`Time Control!`)
+        .addField(
+          "Remaining time",
+          `You still need to wait ${nextAvailableToken(receivers[authorId])} `
+        )
+        .setFooter("Time control ");
       msg.channel.send(errorEmbed);
       return;
     }
-
-}
+    if (address.startsWith(`${ADDRESS_PREFIX}`)) {
+      address = address.slice(`${ADDRESS_PREFIX}`.length);
+    }
+    receivers[authorId] = Date.now();
   }
-}
+};
 
 client.on("message", async (msg) => {
   try {
@@ -194,9 +196,11 @@ client.on("message", async (msg) => {
       msg.channel.send(createEmbed);
     }
     if (msg.content === "send") {
-      const account = await web3Api.eth.accounts.privateKeyToAccount(process.env.ACCOUNT_KEY)
+      const account = await web3Api.eth.accounts.privateKeyToAccount(
+        process.env.ACCOUNT_KEY
+      );
       kit.connection.addAccount(account.privateKey);
-      console.log(account.address)
+      console.log(account.address);
       // 12. Specify recipient Address
       let anAddress = "0x8015A9593036f15F4F151900edB7863E7EbBAaF0";
       let amount = 10;
@@ -208,26 +212,35 @@ client.on("message", async (msg) => {
       let cUSDtx = await stabletoken
         .transfer(anAddress, amount)
         .send({ from: account.address, feeCurrency: stabletoken.address });
-      let celoReceipt = await celotx.waitReceipt()
-       console.log(celoReceipt)
+      let celoReceipt = await celotx.waitReceipt();
+      console.log(celoReceipt);
 
       let cUSDReceipt = await cUSDtx.waitReceipt();
-      let celoBalance = await goldtoken.balanceOf(account.address)
-      let cUSDBalance = await stabletoken.balanceOf(account.address)
+      let celoBalance = await goldtoken.balanceOf(account.address);
+      let cUSDBalance = await stabletoken.balanceOf(account.address);
       const sendEmbed = new MessageEmbed()
         .setColor(EMBED_COLOR_CORRECT)
         .setTitle("Click Here to view your transaction !! ")
-        .addField("Transaction Hash",celoReceipt.transactionHash,true)
-        .setURL( `${URL_EXPLORE}` +'/tx/'+ celoReceipt.transactionHash+'/token_transfers')
+        .addField("Transaction Hash", celoReceipt.transactionHash, true)
+        .setURL(
+          `${URL_EXPLORE}` +
+            "/tx/" +
+            celoReceipt.transactionHash +
+            "/token_transfers"
+        )
         .addField("CELO Transaction receipt: %o", celoReceipt, true)
         .addField("cUSD Transaction receipt: %o", cUSDReceipt, true)
-        .addField("Celo balance" , `Your new account CELO balance: ${celoBalance.toString()}`)
-        .addField("cUSD balance" , `Your new account cUSD balance: ${cUSDBalance.toString()}`)
-  
-        msg.channel.send(sendEmbed);
-      
+        .addField(
+          "Celo balance",
+          `Your new account CELO balance: ${celoBalance.toString()}`
+        )
+        .addField(
+          "cUSD balance",
+          `Your new account cUSD balance: ${cUSDBalance.toString()}`
+        );
+      msg.channel.send(sendEmbed);
     }
-    await onReceiveMessage(msg)
+    await onReceiveMessage(msg);
   } catch (e) {
     msg.reply("ERROR");
     console.log(new Date().toISOString(), "ERROR", e.stack || e);
