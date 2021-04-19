@@ -96,61 +96,7 @@ const nextAvailableToken = (lastTokenRequestMoment) => {
     return `${Math.round(remain / msPerHour)} hour(s)`;
   }
 };
-/**
- *  Send Faucet from message
- * @param {string} msg
- */
-const onReceiveMessage = async (msg) => {
-  const authorId = msg.author.id;
-  const messageContent = msg.content;
-  const channelId = msg.channel.id;
-  let address = messageContent.slice(`${FAUCET_SEND_MSG}`.length).trim();
 
-  if (address.length !== ADDRESS_LENGTH) {
-    console.log(address.length);
-    const errorEmbed = new MessageEmbed()
-      .setColor(EMBED_COLOR_ERROR)
-      .setTitle("Invalid address")
-      .setFooter("Addresses must follow the correct address format");
-    msg.channel.send(errorEmbed);
-    return;
-  }
-  const accountBalance = BigInt(await web3Api.eth.getBalance(`0x${address}`));
-  if (messageContent.startsWith(`${FAUCET_BALANCE_MSG}`)) {
-    let address = messageContent.slice(`${FAUCET_BALANCE_MSG}`.length).trim();
-    if (address.startsWith(`${ADDRESS_PREFIX}`)) {
-      address = address.slice(`${ADDRESS_PREFIX}`.length);
-    }
-    const fundsTransactionEmbed = new MessageEmbed()
-      .setColor(EMBED_COLOR_CORRECT)
-      .setTitle("Balance")
-       .addField(
-        "Current account balance",
-        `${accountBalance / 10n ** TOKEN_DECIMAL} ${TOKEN_NAME}`
-      )
-      .setFooter("Funds transactions are limited to once per hour");
-
-      msg.channel.send(fundsTransactionEmbed);
-  }
-  if (messageContent.startsWith(`${FAUCET_SEND_MSG}`)) {
-    if (receivers[authorId] > Date.now() - 3600 * 1000) {
-      const errorEmbed = new MessageEmbed()
-        .setColor(EMBED_COLOR_ERROR)
-        .setTitle(`Time Control!`)
-        .addField(
-          "Remaining time",
-          `You still need to wait ${nextAvailableToken(receivers[authorId])} `
-        )
-        .setFooter("Time control ");
-      msg.channel.send(errorEmbed);
-      return;
-    }
-    if (address.startsWith(`${ADDRESS_PREFIX}`)) {
-      address = address.slice(`${ADDRESS_PREFIX}`.length);
-    }
-    receivers[authorId] = Date.now();
-  }
-};
 
 client.on("message", async (msg) => {
   try {

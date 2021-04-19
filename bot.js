@@ -114,6 +114,12 @@ const onReceiveMessage = async (msg) => {
         if (address.startsWith(`${ADDRESS_PREFIX}`)) {
             address = address.slice(`${ADDRESS_PREFIX}`.length);
         }
+        const fundsTransactionEmbed = new discord_js_1.MessageEmbed()
+            .setColor(EMBED_COLOR_CORRECT)
+            .setTitle("Balance")
+            .addField("Current account balance", `${accountBalance / 10n ** TOKEN_DECIMAL} ${TOKEN_NAME}`)
+            .setFooter("Funds transactions are limited to once per hour");
+        msg.channel.send(fundsTransactionEmbed);
     }
     if (messageContent.startsWith(`${FAUCET_SEND_MSG}`)) {
         if (receivers[authorId] > Date.now() - 3600 * 1000) {
