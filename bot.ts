@@ -96,7 +96,79 @@ const nextAvailableToken = (lastTokenRequestMoment) => {
     return `${Math.round(remain / msPerHour)} hour(s)`;
   }
 };
+const onReceiveMessage = async (msg) => {
+  const authorId = msg.author.id;
+  const messageContent = msg.content;
+  const channelId = msg.channel.id;
+  if (messageContent.startsWith(`${FAUCET_SEND_MSG}`)) {
+    
+    /*	if (receivers[authorId] > Date.now() - 3600 * 1000) {
+			const errorEmbed = new MessageEmbed()
+				.setColor(EMBED_COLOR_ERROR)
+				.setTitle(`You already received tokens!`)
+				.addField("Remaining time", `You still need to wait ${nextAvailableToken(receivers[authorId])} to receive more tokens`)
+				.setFooter("Funds transactions are limited to once per hour");
+			msg.channel.send(errorEmbed);
+			return;
+		}*/
 
+    let address = messageContent.slice(`${FAUCET_SEND_MSG}`.length).trim();
+    if (address.startsWith(`${ADDRESS_PREFIX}`)) {
+      address = address.slice(`${ADDRESS_PREFIX}`.length);
+    }
+
+    if (address.length !== ADDRESS_LENGTH) {
+      console.log(address.length);
+      const errorEmbed = new MessageEmbed()
+        .setColor(EMBED_COLOR_ERROR)
+        .setTitle("Invalid address")
+        .setFooter("Addresses must follow the correct address format");
+      msg.channel.send(errorEmbed);
+      return;
+    }
+    //receivers[authorId] = Date.now();
+
+   
+    const accountBalance = BigInt(await web3Api.eth.getBalance(`0x${address}`));
+
+    const fundsTransactionEmbed = new MessageEmbed()
+      .setColor(EMBED_COLOR_CORRECT)
+      .setTitle("Transaction of funds")
+      .addField(
+        "Current account balance",
+        `${accountBalance / 10n ** TOKEN_DECIMAL} ${TOKEN_NAME}`
+      )
+      .setFooter("Funds transactions are limited to once per hour");
+
+    msg.channel.send(fundsTransactionEmbed);
+  }
+  if (messageContent.startsWith(`${FAUCET_BALANCE_MSG}`)) {
+    let address = messageContent.slice(`${FAUCET_BALANCE_MSG}`.length).trim();
+    if (address.startsWith(`${ADDRESS_PREFIX}`)) {
+      address = address.slice(`${ADDRESS_PREFIX}`.length);
+    }
+    if (address.length != `${ADDRESS_LENGTH}`) {
+      const errorEmbed = new MessageEmbed()
+        .setColor(EMBED_COLOR_ERROR)
+        .setTitle("Invalid address")
+        .setFooter("Addresses must follow the correct address format");
+      msg.channel.send(errorEmbed);
+      return;
+    }
+    const accountBalance = BigInt(await web3Api.eth.getBalance(`0x${address}`));
+    const balanceEmbed = new MessageEmbed()
+      .setColor(EMBED_COLOR_CORRECT)
+      .setTitle("Account Balance")
+      .addField("Account", `${ADDRESS_PREFIX}${address}`, true)
+      .addField(
+        "Balance",
+        `${accountBalance / 10n ** TOKEN_DECIMAL} ${TOKEN_NAME}`,
+        true
+      );
+
+    msg.channel.send(balanceEmbed);
+  }
+};
 
 client.on("message", async (msg) => {
   try {
