@@ -3,8 +3,12 @@ import Web3 from "web3";
 require("dotenv").config();
 const ethers = require("ethers");
 const bip39 = require("bip39");
-const ContractKit = require("@celo/contractkit");
-
+const  QRCode = require('qrcode')
+const  fs = require('fs');
+const QRContractKit = require("@celo/contractkit");
+const QR_FILE = 'images/filename.png'
+const QR_COLOR = '#42d689'
+const QR_BACKGROUND = '#0000'
 /**
  *  Constants of faucet and tokens
  *
@@ -17,7 +21,7 @@ const CONSTANT = 10;
 const FAUCET_SEND_MSG = "!send";
 const FAUCET_BALANCE_MSG = "!balance";
 const ADDRESS_LENGTH = 40;
-
+//https://github.com/celo-tools/celo-web-wallet/blob/master/src/erc20.ts
 //https://github.com/celo-tools/celo-web-wallet/blob/master/src/consts.ts
 const GAS_PRICE = "0x12A05F200";
 const GAS = "0x5208";
@@ -30,11 +34,10 @@ const URL_WALLET = "https://celowallet.app/setup";
 const URL_EXPLORE = "https://alfajores-blockscout.celo-testnet.org";
 const URL_DISCORD = "https://discord.com/invite/atBpDfqQqX";
 const URL_STATUS = "https://alfajores-celostats.celo-testnet.org";
-//Explorers URL
 
-//Faucets
+const ABOUT_CELO ="CELO is a utility and governance asset for the Celo community, which has a fixed supply and variable value. With CELO, you can help shape the direction of the Celo Platform."
+const ABOUT_CUSD = "cUSD (Celo Dollars) are a stable asset that follows the US Dollar. With cUSD, you can share money faster, cheaper, and more easily on your mobile phone."
 
-//HackerGuides
 
 /*
  *  Params for discord  account configuration
@@ -50,7 +53,7 @@ const params = {
 };
 
 const web3Api = new Web3(params.RPC_URL);
-const kit = ContractKit.newKitFromWeb3(web3Api);
+const kit = QRContractKit.newKitFromWeb3(web3Api);
 
 Object.keys(params).forEach((param) => {
   if (!params[param]) {
@@ -96,6 +99,9 @@ const nextAvailableToken = (lastTokenRequestMoment) => {
     return `${Math.round(remain / msPerHour)} hour(s)`;
   }
 };
+const deleteQRFile = () =>{
+  fs.unlinkSync(QR_FILE)
+}
 const onReceiveMessage = async (msg) => {
   const authorId = msg.author.id;
   const messageContent = msg.content;
@@ -172,6 +178,50 @@ const onReceiveMessage = async (msg) => {
 
 client.on("message", async (msg) => {
   try {
+    let DELETE_FLAG = false;
+    if( msg.content === "qr"){
+ 
+      QRCode.toFile(QR_FILE, 'Some text', {
+        color: {
+          dark: QR_COLOR,  
+          light: QR_BACKGROUND // transparent background
+        },
+        scale: 6
+      }, function (err) {
+        if (err) throw err
+        console.log('done')
+      })
+       msg.channel.send({files: [QR_FILE],})
+      
+       setTimeout(deleteQRFile, 3000);
+      
+     
+    }
+  
+      
+    if (msg.content ==="test"){
+      //words can be 12 length according to bip39 std https://docs.celo.org/celo-owner-guide/eth-recovery
+      let mnemonic = bip39.generateMnemonic();
+      console.log(mnemonic)
+      const wallet = ethers.Wallet.fromMnemonic(mnemonic);
+      const createPrivateEmbed = new MessageEmbed()
+        .setColor(EMBED_COLOR_CORRECT)
+        .addField("Celo address", `Your account address: ${wallet.address}`, true)
+        .addField("Celo address", `Your mnemonic phrase (DO NOT SHARE THIS!!): ${mnemonic}`, true)  
+        .setTitle(`Welcome to your Celo Account (click here to read more) !`)
+        .setURL("https://celo.org")
+        .setThumbnail("https://cdn-images-1.medium.com/max/374/1*2W_-Wv6zKPhdQNfaWf3Z0g@2x.png")
+        .setFooter("Account created ");
+      msg.author.send(createPrivateEmbed);
+      msg.reply(msg.author.displayAvatarURL() + " Welcome to the Celo Community !!");
+      msg.channel.send(`Welcome: ${msg.author.username}\n ID: ${msg.author.id}`);
+      msg.channel.send(
+        `Server name: ${msg.guild.name}\nTotal members of the Celo Community Discord BOT: ${msg.guild.memberCount}`
+      );
+       msg.channel.send({files: ["./images/logo.png"],});
+       
+
+    }
     if (msg.content === "balance") {
       msg.channel.send("pong");
       client.user.setActivity("pong activity", { type: "WATCHING" });
@@ -196,7 +246,6 @@ client.on("message", async (msg) => {
 
       msg.channel.send(balanceEmbed);
     }
-
     if (msg.content === "create") {
       msg.channel.send("creating ..");
       client.user.setActivity("create activity", { type: "COMPETING" });
