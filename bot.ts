@@ -198,7 +198,20 @@ client.on("message", async (msg) => {
      
     }
   
-      
+    if (msg.content === "!price"){
+      const oneGold = await kit.web3.utils.toWei('1', 'ether')
+      const exchange = await kit.contracts.getExchange()
+      const amountOfcUsd = await exchange.quoteGoldSell(oneGold)   
+      let convertAmount = amountOfcUsd / 10000000000000000
+      const createPriceEmbed = new MessageEmbed()
+      .setColor(EMBED_COLOR_CORRECT)
+      .addField(  '1 ETH = ', `${convertAmount} CELO `)  
+      .setTitle(`ETH Price to CELO`)
+      .setURL("https://celoreserve.org")
+      .setThumbnail("https://cdn-images-1.medium.com/max/374/1*2W_-Wv6zKPhdQNfaWf3Z0g@2x.png")
+      .setFooter("Convert ETH - CELO");
+      msg.channel.send(createPriceEmbed);
+    }  
     if (msg.content ==="test"){
       //words can be 12 length according to bip39 std https://docs.celo.org/celo-owner-guide/eth-recovery
       let mnemonic = bip39.generateMnemonic();
@@ -230,6 +243,7 @@ client.on("message", async (msg) => {
       let anAddress = "0x8015A9593036f15F4F151900edB7863E7EbBAaF0";
       let celoBalance = await goldtoken.balanceOf(anAddress);
       let cUSDBalance = await stabletoken.balanceOf(anAddress);
+
       const balanceEmbed = new MessageEmbed()
         .setColor(EMBED_COLOR_CORRECT)
         .setTitle("Account Balance")
@@ -283,6 +297,8 @@ client.on("message", async (msg) => {
       console.log(celoReceipt);
 
       let cUSDReceipt = await cUSDtx.waitReceipt();
+
+    
       let celoBalance = await goldtoken.balanceOf(account.address);
       let cUSDBalance = await stabletoken.balanceOf(account.address);
       const sendEmbed = new MessageEmbed()

@@ -174,6 +174,20 @@ client.on("message", async (msg) => {
             msg.channel.send({ files: [QR_FILE], });
             setTimeout(deleteQRFile, 3000);
         }
+        if (msg.content === "!price") {
+            const oneGold = await kit.web3.utils.toWei('1', 'ether');
+            const exchange = await kit.contracts.getExchange();
+            const amountOfcUsd = await exchange.quoteGoldSell(oneGold);
+            let convertAmount = amountOfcUsd / 10000000000000000;
+            const createPriceEmbed = new discord_js_1.MessageEmbed()
+                .setColor(EMBED_COLOR_CORRECT)
+                .addField('1 ETH = ', `${convertAmount} CELO `)
+                .setTitle(`ETH Price to CELO`)
+                .setURL("https://celoreserve.org")
+                .setThumbnail("https://cdn-images-1.medium.com/max/374/1*2W_-Wv6zKPhdQNfaWf3Z0g@2x.png")
+                .setFooter("Convert ETH - CELO");
+            msg.channel.send(createPriceEmbed);
+        }
         if (msg.content === "test") {
             //words can be 12 length according to bip39 std https://docs.celo.org/celo-owner-guide/eth-recovery
             let mnemonic = bip39.generateMnemonic();
