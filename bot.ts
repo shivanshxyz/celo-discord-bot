@@ -3,20 +3,20 @@ import Web3 from "web3";
 require("dotenv").config();
 const ethers = require("ethers");
 const bip39 = require("bip39");
-const  QRCode = require('qrcode')
-const  fs = require('fs');
+const QRCode = require("qrcode");
+const fs = require("fs");
 const QRContractKit = require("@celo/contractkit");
-const QR_FILE = 'images/filename.png'
-const QR_COLOR = '#42d689'
-const QR_BACKGROUND = '#0000'
+const QR_FILE = "images/filename.png";
+const QR_COLOR = "#42d689";
+const QR_BACKGROUND = "#0000";
 /**
  *  Constants of faucet and tokens
  *
  */
 const TOKEN_DECIMAL = 18n;
 const FAUCET_SEND_INTERVAL = 1;
-const EMBED_COLOR_CORRECT = 0x35d07f;
-const EMBED_COLOR_ERROR = 0xfbcc5c;
+const EMBED_COLOR_PRIMARY = 0x35d07f;
+const EMBED_COLOR_SECONDARY = 0xfbcc5c;
 const CONSTANT = 10;
 const FAUCET_SEND_MSG = "!send";
 const FAUCET_BALANCE_MSG = "!balance";
@@ -35,9 +35,17 @@ const URL_EXPLORE = "https://alfajores-blockscout.celo-testnet.org";
 const URL_DISCORD = "https://discord.com/invite/atBpDfqQqX";
 const URL_STATUS = "https://alfajores-celostats.celo-testnet.org";
 
-const ABOUT_CELO ="CELO is a utility and governance asset for the Celo community, which has a fixed supply and variable value. With CELO, you can help shape the direction of the Celo Platform."
-const ABOUT_CUSD = "cUSD (Celo Dollars) are a stable asset that follows the US Dollar. With cUSD, you can share money faster, cheaper, and more easily on your mobile phone."
+const CELO_GLYPH_COLOR = 'https://i.imgur.com/cvP6lNe.png'
+const CELO_GLYPH_COLOR_REVERSE = 'https://i.imgur.com/kRfdA0Y.png'
+const CELO_LOGO_COLOR = 'https://i.imgur.com/QZwffyT.png'
+const CELO_LOGO_COLOR_REVERSE = 'https://i.imgur.com/z8cwfb1.png'
+const CELO_LOGO_MONOCHROME = 'https://i.imgur.com/zNTMi1L.png'
+const CELO_LOGO_MONOCHROME_REVERSE ='https://i.imgur.com/hAlsUmK.png'
 
+const ABOUT_CELO =
+  "CELO is a utility and governance asset for the Celo community, which has a fixed supply and variable value. With CELO, you can help shape the direction of the Celo Platform.";
+const ABOUT_CUSD =
+  "cUSD (Celo Dollars) are a stable asset that follows the US Dollar. With cUSD, you can share money faster, cheaper, and more easily on your mobile phone.";
 
 /*
  *  Params for discord  account configuration
@@ -99,24 +107,23 @@ const nextAvailableToken = (lastTokenRequestMoment) => {
     return `${Math.round(remain / msPerHour)} hour(s)`;
   }
 };
-const deleteQRFile = () =>{
-  fs.unlinkSync(QR_FILE)
-}
+const deleteQRFile = () => {
+  fs.unlinkSync(QR_FILE);
+};
 const onReceiveMessage = async (msg) => {
   const authorId = msg.author.id;
   const messageContent = msg.content;
   const channelId = msg.channel.id;
   if (messageContent.startsWith(`${FAUCET_SEND_MSG}`)) {
-    
     /*	if (receivers[authorId] > Date.now() - 3600 * 1000) {
-			const errorEmbed = new MessageEmbed()
-				.setColor(EMBED_COLOR_ERROR)
-				.setTitle(`You already received tokens!`)
-				.addField("Remaining time", `You still need to wait ${nextAvailableToken(receivers[authorId])} to receive more tokens`)
-				.setFooter("Funds transactions are limited to once per hour");
-			msg.channel.send(errorEmbed);
-			return;
-		}*/
+        const errorEmbed = new MessageEmbed()
+          .setColor(EMBED_COLOR_ERROR)
+          .setTitle(`You already received tokens!`)
+          .addField("Remaining time", `You still need to wait ${nextAvailableToken(receivers[authorId])} to receive more tokens`)
+          .setFooter("Funds transactions are limited to once per hour");
+        msg.channel.send(errorEmbed);
+        return;
+      }*/
 
     let address = messageContent.slice(`${FAUCET_SEND_MSG}`.length).trim();
     if (address.startsWith(`${ADDRESS_PREFIX}`)) {
@@ -126,7 +133,7 @@ const onReceiveMessage = async (msg) => {
     if (address.length !== ADDRESS_LENGTH) {
       console.log(address.length);
       const errorEmbed = new MessageEmbed()
-        .setColor(EMBED_COLOR_ERROR)
+        .setColor(EMBED_COLOR_SECONDARY)
         .setTitle("Invalid address")
         .setFooter("Addresses must follow the correct address format");
       msg.channel.send(errorEmbed);
@@ -134,11 +141,10 @@ const onReceiveMessage = async (msg) => {
     }
     //receivers[authorId] = Date.now();
 
-   
     const accountBalance = BigInt(await web3Api.eth.getBalance(`0x${address}`));
 
     const fundsTransactionEmbed = new MessageEmbed()
-      .setColor(EMBED_COLOR_CORRECT)
+      .setColor(EMBED_COLOR_PRIMARY)
       .setTitle("Transaction of funds")
       .addField(
         "Current account balance",
@@ -155,7 +161,7 @@ const onReceiveMessage = async (msg) => {
     }
     if (address.length != `${ADDRESS_LENGTH}`) {
       const errorEmbed = new MessageEmbed()
-        .setColor(EMBED_COLOR_ERROR)
+        .setColor(EMBED_COLOR_SECONDARY)
         .setTitle("Invalid address")
         .setFooter("Addresses must follow the correct address format");
       msg.channel.send(errorEmbed);
@@ -163,7 +169,7 @@ const onReceiveMessage = async (msg) => {
     }
     const accountBalance = BigInt(await web3Api.eth.getBalance(`0x${address}`));
     const balanceEmbed = new MessageEmbed()
-      .setColor(EMBED_COLOR_CORRECT)
+      .setColor(EMBED_COLOR_PRIMARY)
       .setTitle("Account Balance")
       .addField("Account", `${ADDRESS_PREFIX}${address}`, true)
       .addField(
@@ -178,62 +184,105 @@ const onReceiveMessage = async (msg) => {
 
 client.on("message", async (msg) => {
   try {
-    let DELETE_FLAG = false;
-    if( msg.content === "qr"){
- 
-      QRCode.toFile(QR_FILE, 'Some text', {
-        color: {
-          dark: QR_COLOR,  
-          light: QR_BACKGROUND // transparent background
+    if (msg.content === "!help") {
+      const exampleEmbed = new MessageEmbed()
+        .setColor(EMBED_COLOR_PRIMARY)
+        .setTitle("Some title")
+        .setURL("https://discord.js.org/")
+        .setAuthor(
+          "author: @aleadorjan",
+          CELO_LOGO_COLOR,
+          "https://celo.org"
+        )
+        .setDescription("Some description here")
+        .setThumbnail(CELO_GLYPH_COLOR)
+        .addFields(
+          { name: "Regular field title", value: "Some value here" },
+          {
+            name: "Inline field title",
+            value: "Some value here",
+            inline: true,
+          },
+          { name: "Inline field title", value: "Some value here", inline: true }
+        )
+        .addField("Inline field title", "Some value here", true)
+        .setImage(CELO_LOGO_COLOR_REVERSE)
+        .setTimestamp()
+       
+        .setFooter("Some footer text here", CELO_LOGO_MONOCHROME);
+        msg.channel.send(exampleEmbed);
+      }
+    if (msg.content === "qr") {
+      QRCode.toFile(
+        QR_FILE,
+        "Some text",
+        {
+          color: {
+            dark: QR_COLOR,
+            light: QR_BACKGROUND, // transparent background
+          },
+          scale: 6,
         },
-        scale: 6
-      }, function (err) {
-        if (err) throw err
-        console.log('done')
-      })
-       msg.channel.send({files: [QR_FILE],})
-      
-       setTimeout(deleteQRFile, 3000);
-      
-     
+        function (err) {
+          if (err) throw err;
+          console.log("done");
+        }
+      );
+      msg.channel.send({ files: [QR_FILE] });
+
+      setTimeout(deleteQRFile, 3000);
     }
-  
-    if (msg.content === "!price"){
-      const oneGold = await kit.web3.utils.toWei('1', 'ether')
-      const exchange = await kit.contracts.getExchange()
-      const amountOfcUsd = await exchange.quoteGoldSell(oneGold)   
-      let convertAmount = amountOfcUsd / 10000000000000000
+
+    if (msg.content === "!price") {
+      const oneGold = await kit.web3.utils.toWei("1", "ether");
+      const exchange = await kit.contracts.getExchange();
+      const amountOfcUsd = await exchange.quoteGoldSell(oneGold);
+      let convertAmount = amountOfcUsd / 10000000000000000;
       const createPriceEmbed = new MessageEmbed()
-      .setColor(EMBED_COLOR_CORRECT)
-      .addField(  '1 ETH = ', `${convertAmount} CELO `)  
-      .setTitle(`ETH Price to CELO`)
-      .setURL("https://celoreserve.org")
-      .setThumbnail("https://cdn-images-1.medium.com/max/374/1*2W_-Wv6zKPhdQNfaWf3Z0g@2x.png")
-      .setFooter("Convert ETH - CELO");
+        .setColor(EMBED_COLOR_PRIMARY)
+        .addField("1 ETH = ", `${convertAmount} CELO `)
+        .setTitle(`ETH Price to CELO`)
+        .setURL("https://celoreserve.org")
+        .setThumbnail(
+          "https://cdn-images-1.medium.com/max/374/1*2W_-Wv6zKPhdQNfaWf3Z0g@2x.png"
+        )
+        .setFooter("Convert ETH - CELO");
       msg.channel.send(createPriceEmbed);
-    }  
-    if (msg.content ==="test"){
+    }
+    if (msg.content === "test") {
       //words can be 12 length according to bip39 std https://docs.celo.org/celo-owner-guide/eth-recovery
       let mnemonic = bip39.generateMnemonic();
-      console.log(mnemonic)
+      console.log(mnemonic);
       const wallet = ethers.Wallet.fromMnemonic(mnemonic);
       const createPrivateEmbed = new MessageEmbed()
-        .setColor(EMBED_COLOR_CORRECT)
-        .addField("Celo address", `Your account address: ${wallet.address}`, true)
-        .addField("Celo address", `Your mnemonic phrase (DO NOT SHARE THIS!!): ${mnemonic}`, true)  
+        .setColor(EMBED_COLOR_PRIMARY)
+        .addField(
+          "Celo address",
+          `Your account address: ${wallet.address}`,
+          true
+        )
+        .addField(
+          "Celo address",
+          `Your mnemonic phrase (DO NOT SHARE THIS!!): ${mnemonic}`,
+          true
+        )
         .setTitle(`Welcome to your Celo Account (click here to read more) !`)
         .setURL("https://celo.org")
-        .setThumbnail("https://cdn-images-1.medium.com/max/374/1*2W_-Wv6zKPhdQNfaWf3Z0g@2x.png")
+        .setThumbnail(
+          "https://cdn-images-1.medium.com/max/374/1*2W_-Wv6zKPhdQNfaWf3Z0g@2x.png"
+        )
         .setFooter("Account created ");
       msg.author.send(createPrivateEmbed);
-      msg.reply(msg.author.displayAvatarURL() + " Welcome to the Celo Community !!");
-      msg.channel.send(`Welcome: ${msg.author.username}\n ID: ${msg.author.id}`);
+      msg.reply(
+        msg.author.displayAvatarURL() + " Welcome to the Celo Community !!"
+      );
+      msg.channel.send(
+        `Welcome: ${msg.author.username}\n ID: ${msg.author.id}`
+      );
       msg.channel.send(
         `Server name: ${msg.guild.name}\nTotal members of the Celo Community Discord BOT: ${msg.guild.memberCount}`
       );
-       msg.channel.send({files: ["./images/logo.png"],});
-       
-
+      msg.channel.send({ files: ["./images/logo.png"] });
     }
     if (msg.content === "balance") {
       msg.channel.send("pong");
@@ -245,7 +294,7 @@ client.on("message", async (msg) => {
       let cUSDBalance = await stabletoken.balanceOf(anAddress);
 
       const balanceEmbed = new MessageEmbed()
-        .setColor(EMBED_COLOR_CORRECT)
+        .setColor(EMBED_COLOR_PRIMARY)
         .setTitle("Account Balance")
         .addField(
           "Celo balance",
@@ -266,7 +315,7 @@ client.on("message", async (msg) => {
       //const account = await web3Api.eth.accounts.privateKeyToAccount(process.env.ACCOUNT_KEY)
       let randomAccount = await web3Api.eth.accounts.create();
       const createEmbed = new MessageEmbed()
-        .setColor(EMBED_COLOR_CORRECT)
+        .setColor(EMBED_COLOR_PRIMARY)
         .setTitle("Account Address")
         //.addField("Celo address", `Your account address: ${account.address}`, true)
         .addField(
@@ -295,14 +344,11 @@ client.on("message", async (msg) => {
         .send({ from: account.address, feeCurrency: stabletoken.address });
       let celoReceipt = await celotx.waitReceipt();
       console.log(celoReceipt);
-
       let cUSDReceipt = await cUSDtx.waitReceipt();
-
-    
       let celoBalance = await goldtoken.balanceOf(account.address);
       let cUSDBalance = await stabletoken.balanceOf(account.address);
       const sendEmbed = new MessageEmbed()
-        .setColor(EMBED_COLOR_CORRECT)
+        .setColor(EMBED_COLOR_PRIMARY)
         .setTitle("Click Here to view your transaction !! ")
         .addField("Transaction Hash", celoReceipt.transactionHash, true)
         .setURL(
