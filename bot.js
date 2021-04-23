@@ -14,10 +14,12 @@ const QRContractKit = require("@celo/contractkit");
 const QR_FILE = "images/filename.png";
 const QR_COLOR = "#42d689";
 const QR_BACKGROUND = "#0000";
+const QR_REQUEST_PAY_10 = "celo://wallet/pay?address=0x7d247aadeade1b2f9e2066182e1fa6723ba366df&displayName=user";
 /**
  *  Constants of faucet and tokens
  *
  */
+const AUTHOR = '@aleadorjan';
 const TOKEN_DECIMAL = 18n;
 const FAUCET_SEND_INTERVAL = 1;
 const EMBED_COLOR_PRIMARY = 0x35d07f;
@@ -32,18 +34,33 @@ const GAS_PRICE = "0x12A05F200";
 const GAS = "0x5208";
 const TOKEN_NAME = "CELO";
 const ADDRESS_PREFIX = "0x";
-const URL_CHAINLINK = "";
+const BOT_NAME = "Celo Discord Bot";
+const BOT_NAME_FOOTER = "A Latam Project";
+const URL_WALLET = "https://celowallet.app";
 const URL_FAUCET = "https://celo.org/developers/faucet";
-const URL_WALLET = "https://celowallet.app/setup";
+const URL_CELO = "https://celo.org";
+const URL_SOCIAL_MEDIUM = 'https://medium.com/celoorg';
+const URL_SOCIAL_GITHUB = 'https://github.com/celo-org';
+const URL_SOCIAL_TWITTER = 'https://twitter.com/CeloOrg';
+const URL_SOCIAL_FORUM = 'https://forum.celo.org/';
+const URL_SOCIAL_CHAT = 'https://discord.gg/6yWMkgM';
+const URL_SOCIAL_YOUTUBE = 'https://youtube.com/channel/UCCZgos_YAJSXm5QX5D5Wkcw';
+const URL_SOCIAL_INSTAGRAM = 'https://www.instagram.com/celoorg/';
+const URL_SOCIAL_DEFI = 'https://defipulse.com/';
+const URL_SOCIAL_LINKEDIN = 'https://www.linkedin.com/company/celoOrg/';
+const URL_SOCIAL_TWITCH = 'https://www.twitch.tv/celoorg';
+const URL_SOCIAL_REDIT = 'https://www.reddit.com/r/celo/';
+const URL_SOCIAL_TELEGRAM = 'https://t.me/celoplatform';
 const URL_EXPLORE = "https://alfajores-blockscout.celo-testnet.org";
-const URL_DISCORD = "https://discord.com/invite/atBpDfqQqX";
+const URL_DISCORD_INVITE = "https://discord.com/invite/atBpDfqQqX";
 const URL_STATUS = "https://alfajores-celostats.celo-testnet.org";
-const CELO_GLYPH_COLOR = 'https://i.imgur.com/cvP6lNe.png';
-const CELO_GLYPH_COLOR_REVERSE = 'https://i.imgur.com/kRfdA0Y.png';
-const CELO_LOGO_COLOR = 'https://i.imgur.com/QZwffyT.png';
-const CELO_LOGO_COLOR_REVERSE = 'https://i.imgur.com/z8cwfb1.png';
-const CELO_LOGO_MONOCHROME = 'https://i.imgur.com/zNTMi1L.png';
-const CELO_LOGO_MONOCHROME_REVERSE = 'https://i.imgur.com/hAlsUmK.png';
+const URL_DISCORD = "https://discord.js.org/";
+const CELO_GLYPH_COLOR = "https://i.imgur.com/cvP6lNe.png";
+const CELO_GLYPH_COLOR_REVERSE = "https://i.imgur.com/kRfdA0Y.png";
+const CELO_LOGO_COLOR = "https://i.imgur.com/QZwffyT.png";
+const CELO_LOGO_COLOR_REVERSE = "https://i.imgur.com/z8cwfb1.png";
+const CELO_LOGO_MONOCHROME = "https://i.imgur.com/zNTMi1L.png";
+const CELO_LOGO_MONOCHROME_REVERSE = "https://i.imgur.com/hAlsUmK.png";
 const ABOUT_CELO = "CELO is a utility and governance asset for the Celo community, which has a fixed supply and variable value. With CELO, you can help shape the direction of the Celo Platform.";
 const ABOUT_CUSD = "cUSD (Celo Dollars) are a stable asset that follows the US Dollar. With cUSD, you can share money faster, cheaper, and more easily on your mobile phone.";
 /*
@@ -109,6 +126,7 @@ const onReceiveMessage = async (msg) => {
     const messageContent = msg.content;
     const channelId = msg.channel.id;
     if (messageContent.startsWith(`${FAUCET_SEND_MSG}`)) {
+        //uncomment before final version
         /*	if (receivers[authorId] > Date.now() - 3600 * 1000) {
             const errorEmbed = new MessageEmbed()
               .setColor(EMBED_COLOR_ERROR)
@@ -131,7 +149,7 @@ const onReceiveMessage = async (msg) => {
             msg.channel.send(errorEmbed);
             return;
         }
-        //receivers[authorId] = Date.now();
+        //receivers[authorId] = Date.now(); //restriction for sending a Celo faucet
         const accountBalance = BigInt(await web3Api.eth.getBalance(`0x${address}`));
         const fundsTransactionEmbed = new discord_js_1.MessageEmbed()
             .setColor(EMBED_COLOR_PRIMARY)
@@ -167,26 +185,43 @@ client.on("message", async (msg) => {
         if (msg.content === "!help") {
             const exampleEmbed = new discord_js_1.MessageEmbed()
                 .setColor(EMBED_COLOR_PRIMARY)
-                .setTitle("Some title")
-                .setURL("https://discord.js.org/")
-                .setAuthor("author: @aleadorjan", CELO_LOGO_COLOR, "https://celo.org")
-                .setDescription("Some description here")
+                .setURL(URL_DISCORD)
+                .setAuthor("author: " + AUTHOR, CELO_LOGO_COLOR, URL_CELO)
+                .setDescription(BOT_NAME)
                 .setThumbnail(CELO_GLYPH_COLOR)
-                .addFields({ name: "Regular field title", value: "Some value here" }, {
-                name: "Inline field title",
-                value: "Some value here",
+                .addFields({
+                name: "!balance",
+                value: "shows the account balance",
                 inline: true,
-            }, { name: "Inline field title", value: "Some value here", inline: true })
-                .addField("Inline field title", "Some value here", true)
+            }, {
+                name: "!balance {address}",
+                value: " shows the account balance of a specific {address}",
+                inline: true,
+            }, { name: "!send", value: "send celo", inline: true }, {
+                name: "!qr",
+                value: "create a qr with send/receive transactions",
+                inline: true,
+            }, { name: "!wallet", value: "links to online wallet", inline: true }, { name: "!social", value: "links to social networks", inline: true })
+                .addField("!help", "!help", true)
                 .setImage(CELO_LOGO_COLOR_REVERSE)
                 .setTimestamp()
-                .setFooter({ icon_url: client.user.avatarURL,
-                text: "© Example" });
-            // .setFooter("Some footer text here", CELO_LOGO_MONOCHROME);
+                .setFooter(BOT_NAME_FOOTER, CELO_LOGO_MONOCHROME);
             msg.channel.send(exampleEmbed);
         }
+        if (msg.content === "!social") {
+            const socialEmbed = new discord_js_1.MessageEmbed()
+                .setColor(EMBED_COLOR_PRIMARY)
+                .setURL(URL_DISCORD)
+                .setAuthor("author: " + msg.author.username, CELO_LOGO_COLOR, URL_CELO)
+                .setDescription(BOT_NAME)
+                .setThumbnail(CELO_GLYPH_COLOR)
+                .addFields({ name: "blog", value: URL_SOCIAL_MEDIUM, inline: true }, { name: "github", value: URL_SOCIAL_GITHUB, inline: true }, { name: "twitter", value: URL_SOCIAL_TWITTER, inline: true }, { name: "forum", value: URL_SOCIAL_FORUM, inline: true }, { name: "chat", value: URL_SOCIAL_CHAT, inline: true }, { name: "youtube", value: URL_SOCIAL_YOUTUBE, inline: true }, { name: "defi", value: URL_SOCIAL_DEFI, inline: true }, { name: "linkedin", value: URL_SOCIAL_LINKEDIN, inline: true }, { name: "twitch", value: URL_SOCIAL_TWITCH, inline: true }, { name: "redit", value: URL_SOCIAL_REDIT, inline: true }, { name: "telegram", value: URL_SOCIAL_TELEGRAM, inline: true })
+                .setTimestamp()
+                .setFooter(BOT_NAME_FOOTER, CELO_GLYPH_COLOR_REVERSE);
+            msg.channel.send(socialEmbed);
+        }
         if (msg.content === "qr") {
-            QRCode.toFile(QR_FILE, "Some text", {
+            QRCode.toFile(QR_FILE, QR_REQUEST_PAY_10, {
                 color: {
                     dark: QR_COLOR,
                     light: QR_BACKGROUND, // transparent background
@@ -260,7 +295,23 @@ client.on("message", async (msg) => {
                 .addField("Celo address", `Your account address: ${randomAccount.address}`, true);
             msg.channel.send(createEmbed);
         }
+        if (msg.content === "wallet") {
+            const exampleEmbed = new discord_js_1.MessageEmbed()
+                .setColor(EMBED_COLOR_PRIMARY)
+                .setTitle("Some title")
+                .setURL(URL_WALLET)
+                .setAuthor(msg.author.username, CELO_LOGO_COLOR, URL_CELO)
+                .setDescription("Online Wallet")
+                .setThumbnail(CELO_GLYPH_COLOR)
+                .addFields({ name: "Online Wallet", value: URL_WALLET })
+                .addField("Inline field title", "Some value here", true)
+                .setImage(CELO_LOGO_COLOR_REVERSE)
+                .setTimestamp()
+                .setFooter("Some footer text here", CELO_LOGO_MONOCHROME);
+            msg.author.send(exampleEmbed);
+        }
         if (msg.content === "send") {
+            msg.channel.send(`Welcome: ${msg.author.username}\n ID: ${msg.author.id}`);
             const account = await web3Api.eth.accounts.privateKeyToAccount(process.env.ACCOUNT_KEY);
             kit.connection.addAccount(account.privateKey);
             console.log(account.address);
@@ -276,10 +327,10 @@ client.on("message", async (msg) => {
                 .transfer(anAddress, amount)
                 .send({ from: account.address, feeCurrency: stabletoken.address });
             let celoReceipt = await celotx.waitReceipt();
-            console.log(celoReceipt);
+            //console.log(celoReceipt);
             let cUSDReceipt = await cUSDtx.waitReceipt();
-            let celoBalance = await goldtoken.balanceOf(account.address);
-            let cUSDBalance = await stabletoken.balanceOf(account.address);
+            let celoBalance = goldtoken.balanceOf(account.address);
+            let cUSDBalance = stabletoken.balanceOf(account.address);
             const sendEmbed = new discord_js_1.MessageEmbed()
                 .setColor(EMBED_COLOR_PRIMARY)
                 .setTitle("Click Here to view your transaction !! ")
@@ -288,8 +339,8 @@ client.on("message", async (msg) => {
                 "/tx/" +
                 celoReceipt.transactionHash +
                 "/token_transfers")
-                .addField("CELO Transaction receipt: %o", celoReceipt, true)
-                .addField("cUSD Transaction receipt: %o", cUSDReceipt, true)
+                .addField("CELO Transaction receipt: %o", celoReceipt.toString(), true)
+                .addField("cUSD Transaction receipt: %o", cUSDReceipt.toString(), true)
                 .addField("Celo balance", `Your new account CELO balance: ${celoBalance.toString()}`)
                 .addField("cUSD balance", `Your new account cUSD balance: ${cUSDBalance.toString()}`);
             msg.channel.send(sendEmbed);
