@@ -28,8 +28,6 @@ const CONSTANT = 10;
 const FAUCET_SEND_MSG = "!faucet send";
 const FAUCET_BALANCE_MSG = "!balance";
 const ADDRESS_LENGTH = 40;
-//https://github.com/celo-tools/celo-web-wallet/blob/master/src/erc20.ts
-//https://github.com/celo-tools/celo-web-wallet/blob/master/src/consts.ts
 const GAS_PRICE = "0x12A05F200";
 const GAS = "0x5208";
 const TOKEN_NAME = "CELO";
@@ -38,6 +36,7 @@ const BOT_NAME = "Celo Discord Bot";
 const BOT_NAME_FOOTER = "A Latam Project";
 const BOT_ADDRESS_ACCOUNT = "0x8015A9593036f15F4F151900edB7863E7EbBAaF0";
 const BOT_SENDING_AMOUNT = 10;
+const DELETE_FILE_TIMEOUT = 10000;
 const URL_WALLET = "https://celowallet.app";
 const URL_FAUCET = "https://celo.org/developers/faucet";
 const URL_CELO = "https://celo.org";
@@ -256,7 +255,7 @@ client.on("message", async (msg) => {
                 .setFooter("Valora APP - Share money with people you value worldwide");
             msg.channel.send(createQREmbed);
             msg.channel.send({ files: [QR_FILE] });
-            setTimeout(deleteQRFile, 3000);
+            setTimeout(deleteQRFile, DELETE_FILE_TIMEOUT);
         }
         if (msg.content === "!price") {
             const oneGold = await kit.web3.utils.toWei("1", "ether");
@@ -280,9 +279,9 @@ client.on("message", async (msg) => {
             const createPrivateEmbed = new discord_js_1.MessageEmbed()
                 .setColor(EMBED_COLOR_PRIMARY)
                 .addField("Celo address", `Your account address: ${wallet.address}`, true)
-                .addField("Celo address", `Your mnemonic phrase (DO NOT SHARE THIS!!): ${mnemonic}`, true)
+                .addField("Celo address", `Your MNEMONIC phrase (DO NOT SHARE THIS!!): ${mnemonic}`, true)
                 .setTitle(`Welcome to your Celo Account (click here to read more) !`)
-                .setURL("https://celo.org")
+                .setURL(URL_CELO)
                 .setThumbnail("https://cdn-images-1.medium.com/max/374/1*2W_-Wv6zKPhdQNfaWf3Z0g@2x.png")
                 .setFooter("Account created ");
             msg.author.send(createPrivateEmbed);
@@ -291,7 +290,7 @@ client.on("message", async (msg) => {
             msg.channel.send(`Server name: ${msg.guild.name}\nTotal members of the Celo Community Discord BOT: ${msg.guild.memberCount}`);
             msg.channel.send({ files: ["./images/logo.png"] });
         }
-        if (msg.content === "!balance") {
+        if (msg.content === "!mybalance") {
             let goldtoken = await kit.contracts.getGoldToken();
             let stabletoken = await kit.contracts.getStableToken();
             let anAddress = BOT_ADDRESS_ACCOUNT;
@@ -299,7 +298,7 @@ client.on("message", async (msg) => {
             let cUSDBalance = await stabletoken.balanceOf(anAddress);
             const balanceEmbed = new discord_js_1.MessageEmbed()
                 .setColor(EMBED_COLOR_PRIMARY)
-                .setTitle("Account Balance")
+                .setTitle("Account Balance CELO/cUSD")
                 .addField("Celo balance", `${anAddress} CELO balance: ${celoBalance.toString()}`, true)
                 .addField("Balance", `${anAddress} cUSD balance: ${cUSDBalance.toString()}`, true);
             msg.channel.send(balanceEmbed);
@@ -348,6 +347,7 @@ client.on("message", async (msg) => {
                 .send({ from: account.address, feeCurrency: stabletoken.address });
             let celoReceipt = await celotx.waitReceipt();
             let cUSDReceipt = await cUSDtx.waitReceipt();
+            console.log(cUSDReceipt);
             let celoBalance = await goldtoken.balanceOf(account.address);
             console.log('celo balance:' + celoBalance);
             let cUSDBalance = await stabletoken.balanceOf(account.address);
@@ -355,7 +355,8 @@ client.on("message", async (msg) => {
             const sendEmbed = await new discord_js_1.MessageEmbed()
                 .setColor(EMBED_COLOR_PRIMARY)
                 .setTitle("Transaction Ok !! Click Here to view it !! ")
-                .addField("Transaction Hash", celoReceipt.transactionHash, true)
+                .addField("celoReceipt Transaction confirmed:", celoReceipt.transactionHash, true)
+                .addField("cUSDReceipt Transaction confirmed:", cUSDReceipt.transactionHash, true)
                 .setURL(`${URL_EXPLORE}` +
                 "/tx/" +
                 celoReceipt.transactionHash +
