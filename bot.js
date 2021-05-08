@@ -25,7 +25,7 @@ const FAUCET_SEND_INTERVAL = 1;
 const EMBED_COLOR_PRIMARY = 0x35d07f;
 const EMBED_COLOR_SECONDARY = 0xfbcc5c;
 const CONSTANT = 10;
-const FAUCET_SEND_MSG = "!send";
+const FAUCET_SEND_MSG = "!faucet send";
 const FAUCET_BALANCE_MSG = "!balance";
 const ADDRESS_LENGTH = 40;
 //https://github.com/celo-tools/celo-web-wallet/blob/master/src/erc20.ts
@@ -36,6 +36,8 @@ const TOKEN_NAME = "CELO";
 const ADDRESS_PREFIX = "0x";
 const BOT_NAME = "Celo Discord Bot";
 const BOT_NAME_FOOTER = "A Latam Project";
+const BOT_ADDRESS_ACCOUNT = "0x8015A9593036f15F4F151900edB7863E7EbBAaF0";
+const BOT_SENDING_AMOUNT = 10;
 const URL_WALLET = "https://celowallet.app";
 const URL_FAUCET = "https://celo.org/developers/faucet";
 const URL_CELO = "https://celo.org";
@@ -55,16 +57,18 @@ const URL_EXPLORE = "https://alfajores-blockscout.celo-testnet.org";
 const URL_DISCORD_INVITE = "https://discord.com/invite/atBpDfqQqX";
 const URL_STATUS = "https://alfajores-celostats.celo-testnet.org";
 const URL_DISCORD = "https://discord.js.org/";
+const URL_VALORA = 'https://valoraapp.com';
 const CELO_GLYPH_COLOR = "https://i.imgur.com/cvP6lNe.png";
 const CELO_GLYPH_COLOR_REVERSE = "https://i.imgur.com/kRfdA0Y.png";
 const CELO_LOGO_COLOR = "https://i.imgur.com/QZwffyT.png";
 const CELO_LOGO_COLOR_REVERSE = "https://i.imgur.com/z8cwfb1.png";
 const CELO_LOGO_MONOCHROME = "https://i.imgur.com/zNTMi1L.png";
 const CELO_LOGO_MONOCHROME_REVERSE = "https://i.imgur.com/hAlsUmK.png";
+const CELO_VALORA = 'https://valoraapp.com/_next/static/images/icon-62b90ddabe4910b9c5d55ecabf817aa8.png';
 const ABOUT_CELO = "CELO is a utility and governance asset for the Celo community, which has a fixed supply and variable value. With CELO, you can help shape the direction of the Celo Platform.";
 const ABOUT_CUSD = "cUSD (Celo Dollars) are a stable asset that follows the US Dollar. With cUSD, you can share money faster, cheaper, and more easily on your mobile phone.";
 /*
- *  Params for discord  account configuration
+ *  Params for discord  account configuration envirolments variables
  *
  */
 const params = {
@@ -93,7 +97,7 @@ const receivers = {};
 console.log(`Starting bot...`);
 console.log(`Connecting web3 to ${params.RPC_URL}...`);
 /**
- *  Login user
+ *  Login
  *
  */
 client.on("ready", () => {
@@ -118,9 +122,17 @@ const nextAvailableToken = (lastTokenRequestMoment) => {
         return `${Math.round(remain / msPerHour)} hour(s)`;
     }
 };
+/**
+ * Removes the temporary generated file for QR transactions
+ */
 const deleteQRFile = () => {
     fs.unlinkSync(QR_FILE);
 };
+/**
+ *
+ * @param msg user message (faucet or balance)
+ * @returns the channel msg
+ */
 const onReceiveMessage = async (msg) => {
     const authorId = msg.author.id;
     const messageContent = msg.content;
@@ -180,6 +192,9 @@ const onReceiveMessage = async (msg) => {
         msg.channel.send(balanceEmbed);
     }
 };
+/**
+ * Main
+ */
 client.on("message", async (msg) => {
     try {
         if (msg.content === "!help") {
@@ -220,7 +235,7 @@ client.on("message", async (msg) => {
                 .setFooter(BOT_NAME_FOOTER, CELO_GLYPH_COLOR_REVERSE);
             msg.channel.send(socialEmbed);
         }
-        if (msg.content === "qr") {
+        if (msg.content === "!qr") {
             QRCode.toFile(QR_FILE, QR_REQUEST_PAY_10, {
                 color: {
                     dark: QR_COLOR,
@@ -232,6 +247,14 @@ client.on("message", async (msg) => {
                     throw err;
                 console.log("done");
             });
+            const createQREmbed = new discord_js_1.MessageEmbed()
+                .setColor(EMBED_COLOR_PRIMARY)
+                .addField("send request to pay ", QR_REQUEST_PAY_10)
+                .setTitle(`QR pay/receive with Valora ` + URL_VALORA)
+                .setURL(URL_VALORA)
+                .setThumbnail(CELO_VALORA)
+                .setFooter("Valora APP - Share money with people you value worldwide");
+            msg.channel.send(createQREmbed);
             msg.channel.send({ files: [QR_FILE] });
             setTimeout(deleteQRFile, 3000);
         }
@@ -242,14 +265,14 @@ client.on("message", async (msg) => {
             let convertAmount = amountOfcUsd / 10000000000000000;
             const createPriceEmbed = new discord_js_1.MessageEmbed()
                 .setColor(EMBED_COLOR_PRIMARY)
-                .addField("1 ETH = ", `${convertAmount} CELO `)
+                .addField("1 ETH/CELO", `${convertAmount}`)
                 .setTitle(`ETH Price to CELO`)
-                .setURL("https://celoreserve.org")
-                .setThumbnail("https://cdn-images-1.medium.com/max/374/1*2W_-Wv6zKPhdQNfaWf3Z0g@2x.png")
-                .setFooter("Convert ETH - CELO");
+                .setURL(URL_CELO)
+                .setTimestamp()
+                .setFooter("Convert ETH - CELO", CELO_GLYPH_COLOR_REVERSE);
             msg.channel.send(createPriceEmbed);
         }
-        if (msg.content === "test") {
+        if (msg.content === "!create") {
             //words can be 12 length according to bip39 std https://docs.celo.org/celo-owner-guide/eth-recovery
             let mnemonic = bip39.generateMnemonic();
             console.log(mnemonic);
@@ -268,12 +291,10 @@ client.on("message", async (msg) => {
             msg.channel.send(`Server name: ${msg.guild.name}\nTotal members of the Celo Community Discord BOT: ${msg.guild.memberCount}`);
             msg.channel.send({ files: ["./images/logo.png"] });
         }
-        if (msg.content === "balance") {
-            msg.channel.send("pong");
-            client.user.setActivity("pong activity", { type: "WATCHING" });
+        if (msg.content === "!balance") {
             let goldtoken = await kit.contracts.getGoldToken();
             let stabletoken = await kit.contracts.getStableToken();
-            let anAddress = "0x8015A9593036f15F4F151900edB7863E7EbBAaF0";
+            let anAddress = BOT_ADDRESS_ACCOUNT;
             let celoBalance = await goldtoken.balanceOf(anAddress);
             let cUSDBalance = await stabletoken.balanceOf(anAddress);
             const balanceEmbed = new discord_js_1.MessageEmbed()
@@ -283,8 +304,7 @@ client.on("message", async (msg) => {
                 .addField("Balance", `${anAddress} cUSD balance: ${cUSDBalance.toString()}`, true);
             msg.channel.send(balanceEmbed);
         }
-        if (msg.content === "create") {
-            msg.channel.send("creating ..");
+        if (msg.content === "!create") {
             client.user.setActivity("create activity", { type: "COMPETING" });
             //const account = await web3Api.eth.accounts.privateKeyToAccount(process.env.ACCOUNT_KEY)
             let randomAccount = await web3Api.eth.accounts.create();
@@ -295,7 +315,7 @@ client.on("message", async (msg) => {
                 .addField("Celo address", `Your account address: ${randomAccount.address}`, true);
             msg.channel.send(createEmbed);
         }
-        if (msg.content === "wallet") {
+        if (msg.content === "!wallet") {
             const exampleEmbed = new discord_js_1.MessageEmbed()
                 .setColor(EMBED_COLOR_PRIMARY)
                 .setTitle("Some title")
@@ -310,14 +330,14 @@ client.on("message", async (msg) => {
                 .setFooter("Some footer text here", CELO_LOGO_MONOCHROME);
             msg.author.send(exampleEmbed);
         }
-        if (msg.content === "send") {
+        if (msg.content === "!send") {
             msg.channel.send(`Welcome: ${msg.author.username}\n ID: ${msg.author.id}`);
             const account = await web3Api.eth.accounts.privateKeyToAccount(process.env.ACCOUNT_KEY);
             kit.connection.addAccount(account.privateKey);
             console.log(account.address);
             // 12. Specify recipient Address
-            let anAddress = "0x8015A9593036f15F4F151900edB7863E7EbBAaF0";
-            let amount = 10;
+            let anAddress = BOT_ADDRESS_ACCOUNT;
+            let amount = BOT_SENDING_AMOUNT;
             let goldtoken = await kit.contracts.getGoldToken();
             let stabletoken = await kit.contracts.getStableToken();
             let celotx = await goldtoken
@@ -327,25 +347,24 @@ client.on("message", async (msg) => {
                 .transfer(anAddress, amount)
                 .send({ from: account.address, feeCurrency: stabletoken.address });
             let celoReceipt = await celotx.waitReceipt();
-            //console.log(celoReceipt);
             let cUSDReceipt = await cUSDtx.waitReceipt();
-            let celoBalance = goldtoken.balanceOf(account.address);
-            let cUSDBalance = stabletoken.balanceOf(account.address);
-            const sendEmbed = new discord_js_1.MessageEmbed()
+            let celoBalance = await goldtoken.balanceOf(account.address);
+            console.log('celo balance:' + celoBalance);
+            let cUSDBalance = await stabletoken.balanceOf(account.address);
+            console.log('cUSD balance: ' + cUSDBalance);
+            const sendEmbed = await new discord_js_1.MessageEmbed()
                 .setColor(EMBED_COLOR_PRIMARY)
-                .setTitle("Click Here to view your transaction !! ")
+                .setTitle("Transaction Ok !! Click Here to view it !! ")
                 .addField("Transaction Hash", celoReceipt.transactionHash, true)
                 .setURL(`${URL_EXPLORE}` +
                 "/tx/" +
                 celoReceipt.transactionHash +
                 "/token_transfers")
-                .addField("CELO Transaction receipt: %o", celoReceipt.toString(), true)
-                .addField("cUSD Transaction receipt: %o", cUSDReceipt.toString(), true)
-                .addField("Celo balance", `Your new account CELO balance: ${celoBalance.toString()}`)
-                .addField("cUSD balance", `Your new account cUSD balance: ${cUSDBalance.toString()}`);
+                .addField("Celo balance", `Your new account CELO balance: ${celoBalance}`)
+                .addField("cUSD balance", `Your new account cUSD balance: ${cUSDBalance}`);
             msg.channel.send(sendEmbed);
         }
-        await onReceiveMessage(msg);
+        // await onReceiveMessage(msg);
     }
     catch (e) {
         msg.reply("ERROR");
