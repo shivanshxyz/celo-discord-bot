@@ -13,7 +13,6 @@ const bip39 = require("bip39");
 const QRCode = require("qrcode");
 const fs = require("fs");
 const QRContractKit = require("@celo/contractkit");
-const QR_FILE = "images/filename.png";
 const QR_COLOR = "#42d689";
 const QR_BACKGROUND = "#0000";
 const QR_REQUEST_PAY_10 =
@@ -22,13 +21,13 @@ const QR_REQUEST_PAY_10 =
  *  Constants of faucet and tokens
  *
  */
-const AUTHOR = "@aleadorjan";
+const AUTHOR = "@shivanshxyz";
 const TOKEN_DECIMAL = 18n;
 const FAUCET_SEND_INTERVAL = 1;
 const EMBED_COLOR_PRIMARY = 0x35d07f;
 const EMBED_COLOR_SECONDARY = 0xfbcc5c;
 const CONSTANT = 10;
-const FAUCET_SEND_MSG = "!faucet send";
+//const FAUCET_SEND_MSG = "!faucet send";
 const FAUCET_BALANCE_MSG = "!balance";
 const ADDRESS_LENGTH = 40;
 const GAS_PRICE = "0x12A05F200";
@@ -178,8 +177,6 @@ client.on("message", async (msg) => {
     if (msg.content === "!help") {
       const exampleEmbed = new discord_js_1.MessageEmbed()
         .setColor(EMBED_COLOR_PRIMARY)
-        .setURL(URL_DISCORD)
-        .setAuthor("author: " + AUTHOR, CELO_LOGO_COLOR, URL_CELO)
         .setDescription(BOT_NAME)
         .setThumbnail(CELO_GLYPH_COLOR)
         .addFields(
@@ -198,9 +195,7 @@ client.on("message", async (msg) => {
             name: "!qr",
             value: "create a qr with send/receive transactions",
             inline: true,
-          },
-          { name: "!wallet", value: "links to online wallet", inline: true },
-          { name: "!social", value: "links to social networks", inline: true }
+          }
         )
         .addField("!help", "!help", true)
         .setImage(CELO_LOGO_COLOR_REVERSE)
@@ -208,30 +203,7 @@ client.on("message", async (msg) => {
         .setFooter(BOT_NAME_FOOTER, CELO_LOGO_MONOCHROME);
       msg.channel.send(exampleEmbed);
     }
-    if (msg.content === "!social") {
-      const socialEmbed = new discord_js_1.MessageEmbed()
-        .setColor(EMBED_COLOR_PRIMARY)
-        .setURL(URL_DISCORD)
-        .setAuthor("author: " + msg.author.username, CELO_LOGO_COLOR, URL_CELO)
-        .setDescription(BOT_NAME)
-        .setThumbnail(CELO_GLYPH_COLOR)
-        .addFields(
-          { name: "blog", value: URL_SOCIAL_MEDIUM, inline: true },
-          { name: "github", value: URL_SOCIAL_GITHUB, inline: true },
-          { name: "twitter", value: URL_SOCIAL_TWITTER, inline: true },
-          { name: "forum", value: URL_SOCIAL_FORUM, inline: true },
-          { name: "chat", value: URL_SOCIAL_CHAT, inline: true },
-          { name: "youtube", value: URL_SOCIAL_YOUTUBE, inline: true },
-          { name: "defi", value: URL_SOCIAL_DEFI, inline: true },
-          { name: "linkedin", value: URL_SOCIAL_LINKEDIN, inline: true },
-          { name: "twitch", value: URL_SOCIAL_TWITCH, inline: true },
-          { name: "redit", value: URL_SOCIAL_REDIT, inline: true },
-          { name: "telegram", value: URL_SOCIAL_TELEGRAM, inline: true }
-        )
-        .setTimestamp()
-        .setFooter(BOT_NAME_FOOTER, CELO_GLYPH_COLOR_REVERSE);
-      msg.channel.send(socialEmbed);
-    }
+
     if (msg.content === "!qr") {
       QRCode.toFile(
         QR_FILE,
@@ -301,7 +273,7 @@ client.on("message", async (msg) => {
         `Welcome: ${msg.author.username}\n ID: ${msg.author.id}`
       );
     }
-    if (msg.content === "!mybalance") {
+    if (msg.content === "!balance") {
       let goldtoken = await kit.contracts.getGoldToken();
       let stabletoken = await kit.contracts.getStableToken();
       let anAddress = BOT_ADDRESS_ACCOUNT;
